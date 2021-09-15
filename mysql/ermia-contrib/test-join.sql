@@ -1,0 +1,10 @@
+DROP DATABASE IF EXISTS test_join;
+CREATE DATABASE test_join;
+CREATE TABLE test_join.t1 (id BIGINT(10) PRIMARY KEY, name VARCHAR(255)) ENGINE=InnoDB;
+CREATE TABLE test_join.t2 (id BIGINT(10) PRIMARY KEY, title VARCHAR(255)) ENGINE=ERMIA;
+BEGIN;
+INSERT INTO test_join.t1 (id, name) VALUES (1, "john"), (2, "tim"), (3, "ermia");
+INSERT INTO test_join.t2 (id, title) VALUES (1, "Software Engineer I"), (2, "HR"), (3, "Product Manager");
+COMMIT;
+SELECT t1.id, t1.name, t2.title FROM test_join.t1 LEFT JOIN test_join.t2 ON t1.id = t2.id;
+SELECT * FROM test_join.t1;

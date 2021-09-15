@@ -1,0 +1,43 @@
+[system]
+
+cpuset = "49-80"
+socket = "/dev/shm/void001/mysql/mysqld.sock"
+cleanup = true
+ignore_errors = ["1180", "1030", "1412", "1213"]
+init = true
+cwd = "../"
+
+[[benchmark]]
+# Required
+id = "oltp_read_only_cross"
+bench_script = "./sysbench/oltp_read_only_cross.lua"
+connection = [1, 2, 4, 8, 16, 32, 64, 128, 144]
+table_size = 2500
+table_count = 100
+innodb_percentage = 75
+random_type = "uniform"
+db = "dbtest"
+nround = 5
+
+[[benchmark]]
+id = "oltp_write_only_cross"
+bench_script = "./sysbench/oltp_write_only_cross.lua"
+connection = [48, 96, 144]
+table_size = 250000
+table_count = 100
+innodb_percentage = 75
+random_type = "uniform"
+write = 10
+db = "dbtest"
+
+[[benchmark]]
+id = "oltp_read_write_cross"
+bench_script = "./sysbench/oltp_read_write_cross.lua"
+connection = [48, 96, 144]
+table_size = 250000
+table_count = 100
+innodb_percentage = 75
+random_type = "uniform"
+write = 8
+read = 2
+db = "dbtest"
