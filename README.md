@@ -1,4 +1,4 @@
-# Skeena: Efficient and Consistent Cross-Engine Transactions
+## Skeena: Efficient and Consistent Cross-Engine Transactions
 
 Skeena enables consistent ACID cross-engine transactions over two database engines (e.g., InnoDB and ERMIA, both in MySQL) without intrusive changes to individual engines. 
 
