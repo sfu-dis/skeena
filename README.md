@@ -14,7 +14,7 @@ ACM SIGMOD/PODS International Conference on Management of Data 2022
 
 ### Directory structure and notable source files:
 * mysql/ - modified MySQL to support ERMIA and Skeena
-* mysql/innobase/trx/trx0trx.cc - modified InnoDB transaction code for snapshot selection
+* mysql/storage/innobase/trx/trx0trx.cc - modified InnoDB transaction code for snapshot selection
 * mysql/sql/gtt.{h,cc} - core Skeena implementation
 
 ### Build ERMIA:
