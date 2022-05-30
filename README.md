@@ -2,15 +2,15 @@
 
 Skeena enables consistent ACID cross-engine transactions over two database engines (e.g., storage-centric InnoDB and memory-optimized ERMIA, both in MySQL) without intrusive changes to individual engines. 
 
-This repository implements Skeena and integrates the [ERMIA](https://github.com/sfu-dis/ermia) (SIGMOD 2016) main-memory database engine into MySQL alongside with its default InnoDB engine.
-
-See details in our SIGMOD 2022 paper below. If you use our work, please cite:
+This repository implements [Skeena](https://www.cs.sfu.ca/~tzwang/skeena.pdf). See details in our [SIGMOD 2022 paper](https://www.cs.sfu.ca/~tzwang/skeena.pdf) below. If you use our work, please cite:
 
 ```
 Skeena: Efficient and Consistent Cross-Engine Transactions.
 Jianqiu Zhang, Kaisong Huang, Tianzheng Wang and King Lv.
 ACM SIGMOD/PODS International Conference on Management of Data 2022
 ```
+
+The implementation integrates the [ERMIA](https://github.com/sfu-dis/ermia) (SIGMOD 2016) main-memory database engine into MySQL alongside with its default InnoDB engine to enable cross-engine transactions.
 
 ### Directory structure and notable source files:
 * mysql/ - modified MySQL to support ERMIA and Skeena
