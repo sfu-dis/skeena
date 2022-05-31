@@ -1,7 +1,7 @@
 [system]
 
 cpuset = "49-80"
-socket = "/dev/shm/void001/mysql/mysqld.sock"
+socket = "/dev/shm/$USER/mysql/mysqld.sock"
 cleanup = true
 ignore_errors = ["1180", "1030", "1412", "1213"]
 init = true

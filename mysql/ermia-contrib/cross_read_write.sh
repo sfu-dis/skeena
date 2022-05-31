@@ -19,7 +19,7 @@ if [ $p_innodb -lt 0 ] || [ $p_innodb -gt 100 ]; then
 fi
 
 # Read write workload
-taskset -c 1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63,65,67,69,71,73,75,77,79 sysbench ./sysbench/oltp_read_write_cross.lua \
+taskset -c <client threads> sysbench ./sysbench/oltp_read_write_cross.lua \
 --mysql-ignore-errors=1180,1030,1412,1213 \
 --innodb_percentage=$p_innodb \
 --create_secondary=off \
