@@ -19,7 +19,7 @@ if [ $p_pgsql -lt 0 ] || [ $p_pgsql -gt 100 ]; then
 fi
 
 # Read only workload
-taskset -c 0,2,4,6,8,10,12,14,16,18 sysbench ./sysbench/oltp_read_only_pgsql.lua \
+taskset -c 1-79:2 sysbench ./sysbench/oltp_read_only_pgsql.lua \
 --pgsql_percentage=$p_pgsql \
 --create_secondary=off \
 --rand-type=uniform \
@@ -28,7 +28,7 @@ taskset -c 0,2,4,6,8,10,12,14,16,18 sysbench ./sysbench/oltp_read_only_pgsql.lua
 --table_size=$table_size \
 --pgsql-db=dbtest \
 --db-driver=pgsql \
---pgsql-host=127.0.0.1 \
+--pgsql-host=/tmp \
 --pgsql-port=5432 \
 --pgsql-user=$USER \
 --threads=$n_connections \
