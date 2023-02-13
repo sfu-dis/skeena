@@ -20,6 +20,7 @@ SUBDIRS = \
 		dict_int	\
 		dict_xsyn	\
 		earthdistance	\
+		ermia_fdw \
 		file_fdw	\
 		fuzzystrmatch	\
 		hstore		\
