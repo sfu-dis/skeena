@@ -151,31 +151,39 @@ Datum ermia_fdw_handler(PG_FUNCTION_ARGS)
 {
 	FdwRoutine *fdw_routine = makeNode(FdwRoutine);
 
+	/* Functions for scanning foreign tables */
 	fdw_routine->GetForeignRelSize = dummyGetForeignRelSize;
 	fdw_routine->GetForeignPaths = dummyGetForeignPaths;
 	fdw_routine->GetForeignPlan = dummyGetForeignPlan;
-	fdw_routine->ExplainForeignScan = dummyExplainForeignScan;
-	fdw_routine->ExplainForeignModify = dummyExplainForeignModify;
-
 	fdw_routine->BeginForeignScan = dummyBeginForeignScan;
 	fdw_routine->IterateForeignScan = dummyIterateForeignScan;
 	fdw_routine->ReScanForeignScan = dummyReScanForeignScan;
 	fdw_routine->EndForeignScan = dummyEndForeignScan;
 
-  /* insert support */
-	fdw_routine->AddForeignUpdateTargets = dummyAddForeignUpdateTargets;
+	/*
+	 * Remaining functions are optional. Set the pointer to NULL for any that are not provided.
+	 */
 
-	fdw_routine->PlanForeignModify = dummyPlanForeignModify;
-	fdw_routine->BeginForeignModify = dummyBeginForeignModify;
-	fdw_routine->ExecForeignInsert = dummyExecForeignInsert;
-	fdw_routine->ExecForeignUpdate = dummyExecForeignUpdate;
-	fdw_routine->ExecForeignDelete = dummyExecForeignDelete;
-	fdw_routine->EndForeignModify = dummyEndForeignModify;
-	fdw_routine->IsForeignRelUpdatable = dummyIsForeignRelUpdatable;
+	/* Functions for creating foreign tables */
+	// fdw_routine->ValidateTableDef = ermiaValidateTableDef;
 
-	fdw_routine->AnalyzeForeignTable = dummyAnalyzeForeignTable;
+	/* Functions for updating foreign tables */
+	fdw_routine->AddForeignUpdateTargets = NULL;
+	fdw_routine->PlanForeignModify = NULL;
+	fdw_routine->BeginForeignModify = NULL;
+	fdw_routine->ExecForeignInsert = NULL;
+	fdw_routine->ExecForeignUpdate = NULL;
+	fdw_routine->ExecForeignDelete = NULL;
+	fdw_routine->EndForeignModify = NULL;
+	fdw_routine->IsForeignRelUpdatable = NULL;
 
-	fdw_routine->ValidateTableDef = ermiaValidateTableDef;
+	/* Support functions for EXPLAIN */
+	fdw_routine->ExplainForeignScan = NULL;
+	fdw_routine->ExplainForeignModify = NULL;
+
+	/* Support functions for ANALYZE */
+	fdw_routine->AnalyzeForeignTable = NULL;
+
 	PG_RETURN_POINTER(fdw_routine);
 }
 
@@ -208,7 +216,7 @@ dummyGetForeignRelSize(PlannerInfo *root,
 						   RelOptInfo *baserel,
 						   Oid foreigntableid)
 {
-		baserel-> rows = 0;
+	// TODO
 }
 
 /*
@@ -220,29 +228,7 @@ dummyGetForeignPaths(PlannerInfo *root,
 						 RelOptInfo *baserel,
 						 Oid foreigntableid)
 {
-	Path	   *path;
-#if (PG_VERSION_NUM < 90500)
-	path = (Path *) create_foreignscan_path(root, baserel,
-						baserel->rows,
-						10,
-						0,
-						NIL,
-						NULL,
-						NULL);
-#else
-	path = (Path *) create_foreignscan_path(root, baserel,
-#if PG_VERSION_NUM >= 90600
-						NULL,
-#endif
-						baserel->rows,
-						10,
-						0,
-						NIL,
-						NULL,
-						NULL,
-						NIL);
-#endif
-  add_path(baserel, path);
+	// TODO
 }
 
 /*
@@ -258,18 +244,8 @@ dummyGetForeignPlan(PlannerInfo *root,
 						List *tlist,
 						List *scan_clauses)
 {
-	Index		scan_relid = baserel->relid;
-  Datum    blob = 0;
-  Const    *blob2 = makeConst(INTERNALOID, 0, 0,
-                 sizeof(blob),
-                 blob,
-                 false, false);
-	scan_clauses = extract_actual_clauses(scan_clauses, false);
-	return make_foreignscan(tlist,
-			scan_clauses,
-			scan_relid,
-			scan_clauses,
-			(void *)blob2);
+	// TODO
+	return NULL;
 }
 #else
 static ForeignScan *
@@ -281,17 +257,8 @@ dummyGetForeignPlan(PlannerInfo *root,
 						List *scan_clauses,
 						Plan *outer_plan)
 {
-	Index		scan_relid = baserel->relid;
-	scan_clauses = extract_actual_clauses(scan_clauses, false);
-
-	return make_foreignscan(tlist,
-			scan_clauses,
-			scan_relid,
-			scan_clauses,
-			NIL,
-			NIL,
-			NIL,
-			outer_plan);
+	// TODO
+	return NULL;
 }
 #endif
 /*
@@ -314,6 +281,7 @@ dummyExplainForeignScan(ForeignScanState *node, ExplainState *es)
 static void
 dummyBeginForeignScan(ForeignScanState *node, int eflags)
 {
+	// TODO
 }
 
 
@@ -329,6 +297,7 @@ dummyBeginForeignScan(ForeignScanState *node, int eflags)
 static TupleTableSlot *
 dummyIterateForeignScan(ForeignScanState *node)
 {
+	// TODO
 	return NULL;
 }
 
@@ -339,6 +308,7 @@ dummyIterateForeignScan(ForeignScanState *node)
 static void
 dummyReScanForeignScan(ForeignScanState *node)
 {
+	// TODO
 }
 
 /*
@@ -348,6 +318,7 @@ dummyReScanForeignScan(ForeignScanState *node)
 static void
 dummyEndForeignScan(ForeignScanState *node)
 {
+	// TODO
 }
 
 
