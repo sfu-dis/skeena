@@ -1,28 +1,29 @@
 /*
- * The dummy Foreign Data Wrapper allows you 
- * to test foreign data wrappers. 
+ * The dummy Foreign Data Wrapper allows you
+ * to test foreign data wrappers.
  */
 
 #include "postgres.h"
 #include "access/sysattr.h"
-#include "nodes/pg_list.h"
-#include "nodes/makefuncs.h"
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_foreign_table.h"
-#include "catalog/pg_type.h" 
+#include "catalog/pg_type.h"
+#include "commands/explain.h"
 #include "foreign/fdwapi.h"
 #include "foreign/foreign.h"
-#include "commands/explain.h"
+#include "nodes/pg_list.h"
+#include "nodes/makefuncs.h"
+#include "optimizer/appendinfo.h"
 #include "optimizer/paths.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/planmain.h"
-#include "parser/parsetree.h"
 #include "optimizer/restrictinfo.h"
+#include "parser/parsetree.h"
 
 PG_MODULE_MAGIC;
 
-extern Datum dummy_handler(PG_FUNCTION_ARGS);
-PG_FUNCTION_INFO_V1(dummy_handler);
+extern "C" Datum ermia_fdw_handler(PG_FUNCTION_ARGS);
+PG_FUNCTION_INFO_V1(ermia_fdw_handler);
 
 void		_PG_init(void);
 void		_PG_fini(void);
@@ -63,7 +64,8 @@ static void dummyEndForeignScan(ForeignScanState *node);
 /*
  * FDW callback routines
  */
-static void dummyAddForeignUpdateTargets(Query *parsetree,
+static void dummyAddForeignUpdateTargets(PlannerInfo *root,
+								Index rtindex,
 								RangeTblEntry *target_rte,
 								Relation target_relation);
 static List *dummyPlanForeignModify(PlannerInfo *root,
@@ -104,6 +106,7 @@ static int dummyAcquireSampleRowsFunc(Relation relation, int elevel,
 							  HeapTuple *rows, int targrows,
 							  double *totalrows,
 							  double *totaldeadrows);
+static void ermiaValidateTableDef(Node* obj);
 
 /* magic */
 enum FdwScanPrivateIndex
@@ -136,7 +139,7 @@ enum FdwModifyPrivateIndex
 };
 
 
-void _PG_init() 
+void _PG_init()
 {
 }
 
@@ -144,7 +147,7 @@ void _PG_fini()
 {
 }
 
-Datum dummy_handler(PG_FUNCTION_ARGS)
+Datum ermia_fdw_handler(PG_FUNCTION_ARGS)
 {
 	FdwRoutine *fdw_routine = makeNode(FdwRoutine);
 
@@ -172,9 +175,29 @@ Datum dummy_handler(PG_FUNCTION_ARGS)
 
 	fdw_routine->AnalyzeForeignTable = dummyAnalyzeForeignTable;
 
+	fdw_routine->ValidateTableDef = ermiaValidateTableDef;
 	PG_RETURN_POINTER(fdw_routine);
 }
 
+/*
+ * @brief: Validate table definition
+ * @param obj: A Obj including infomation to validate when alter tabel and create table.
+ */
+static void ermiaValidateTableDef(Node* obj)
+{
+	if (obj == NULL) {
+		return;
+	}
+
+	switch (nodeTag(obj)) {
+		case T_CreateForeignTableStmt: {
+			elog(ERROR, "We need to invoke ermia::Engine::CreateTable(const char *name)");
+			break;
+		}
+		default:
+			elog(ERROR, "unsupported node type: %u", nodeTag(obj));
+	}
+}
 
 /*
  * GetForeignRelSize
@@ -203,8 +226,8 @@ dummyGetForeignPaths(PlannerInfo *root,
 						baserel->rows,
 						10,
 						0,
-						NIL,	
-						NULL,	
+						NIL,
+						NULL,
 						NULL);
 #else
 	path = (Path *) create_foreignscan_path(root, baserel,
@@ -224,7 +247,7 @@ dummyGetForeignPaths(PlannerInfo *root,
 
 /*
  * GetForeignPlan
- *	create a ForeignScan plan node 
+ *	create a ForeignScan plan node
  */
 #if (PG_VERSION_NUM <= 90500)
 static ForeignScan *
@@ -245,7 +268,7 @@ dummyGetForeignPlan(PlannerInfo *root,
 	return make_foreignscan(tlist,
 			scan_clauses,
 			scan_relid,
-			scan_clauses,		
+			scan_clauses,
 			(void *)blob2);
 }
 #else
@@ -284,8 +307,8 @@ dummyExplainForeignScan(ForeignScanState *node, ExplainState *es)
 */
 /*
  * BeginForeignScan
- *   called during executor startup. perform any initialization 
- *   needed, but not start the actual scan. 
+ *   called during executor startup. perform any initialization
+ *   needed, but not start the actual scan.
  */
 
 static void
@@ -299,9 +322,9 @@ dummyBeginForeignScan(ForeignScanState *node, int eflags)
  * IterateForeignScan
  *		Retrieve next row from the result set, or clear tuple slot to indicate
  *		EOF.
- *   Fetch one row from the foreign source, returning it in a tuple table slot 
- *    (the node's ScanTupleSlot should be used for this purpose). 
- *  Return NULL if no more rows are available. 
+ *   Fetch one row from the foreign source, returning it in a tuple table slot
+ *    (the node's ScanTupleSlot should be used for this purpose).
+ *  Return NULL if no more rows are available.
  */
 static TupleTableSlot *
 dummyIterateForeignScan(ForeignScanState *node)
@@ -320,7 +343,7 @@ dummyReScanForeignScan(ForeignScanState *node)
 
 /*
  *EndForeignScan
- *	End the scan and release resources. 
+ *	End the scan and release resources.
  */
 static void
 dummyEndForeignScan(ForeignScanState *node)
@@ -332,72 +355,29 @@ dummyEndForeignScan(ForeignScanState *node)
  * postgresAddForeignUpdateTargets
  *    Add resjunk column(s) needed for update/delete on a foreign table
  */
-static void 
-dummyAddForeignUpdateTargets(Query *parsetree,
+static void
+dummyAddForeignUpdateTargets(PlannerInfo *root,
+								Index rtindex,
 								RangeTblEntry *target_rte,
 								Relation target_relation)
 {
- Var      *var;
-  const char *attrname;
-  TargetEntry *tle;
+	Var		   *var;
 
-/*
- * In postgres_fdw, what we need is the ctid, same as for a regular table.
- */
+	/*
+	 * In postgres_fdw, what we need is the ctid, same as for a regular table.
+	 */
 
-  /* Make a Var representing the desired value */
-  var = makeVar(parsetree->resultRelation,
-          SelfItemPointerAttributeNumber,
-          TIDOID,
-          -1,
-          InvalidOid,
-          0);
+	/* Make a Var representing the desired value */
+	var = makeVar(rtindex,
+				  SelfItemPointerAttributeNumber,
+				  TIDOID,
+				  -1,
+				  InvalidOid,
+				  0);
 
-  /* Wrap it in a resjunk TLE with the right name ... */
-  attrname = "ctid";
-
-  tle = makeTargetEntry((Expr *) var,
-              list_length(parsetree->targetList) + 1,
-              pstrdup(attrname),
-              true);
-
-  /* ... and add it to the query's targetlist */
-  parsetree->targetList = lappend(parsetree->targetList, tle);
+	/* Register it as a row-identity column needed by this target rel */
+	add_row_identity_var(root, var, rtindex, "ctid");
 }
-
-
-
-
-
-/* 
-#include "postgres.h"
-
-#include "postgres_fdw.h"
-
-#include "access/htup_details.h"
-#include "access/sysattr.h"
-#include "commands/defrem.h"
-#include "commands/explain.h"
-#include "commands/vacuum.h"
-#include "foreign/fdwapi.h"
-#include "funcapi.h"
-#include "miscadmin.h"
-#include "nodes/makefuncs.h"
-#include "nodes/nodeFuncs.h"
-#include "optimizer/cost.h"
-#include "optimizer/pathnode.h"
-#include "optimizer/paths.h"
-#include "optimizer/planmain.h"
-#include "optimizer/prep.h"
-#include "optimizer/restrictinfo.h"
-#include "optimizer/var.h"
-#include "parser/parsetree.h"
-#include "utils/builtins.h"
-#include "utils/guc.h"
-#include "utils/lsyscache.h"
-#include "utils/memutils.h"
-
-*/
 
 /*
  * dummyPlanForeignModify
@@ -463,7 +443,7 @@ dummyPlanForeignModify(PlannerInfo *root,
 		while ((col = bms_first_member(tmpset)) >= 0)
 		{
 			col += FirstLowInvalidHeapAttributeNumber;
-			if (col <= InvalidAttrNumber)		// shouldn't happen 
+			if (col <= InvalidAttrNumber)		// shouldn't happen
 				elog(ERROR, "system-column update is not supported");
 			targetAttrs = lappend_int(targetAttrs, col);
 		}
@@ -613,7 +593,7 @@ dummyExplainForeignScan(ForeignScanState *node, ExplainState *es)
 		ExplainPropertyText("Dummy SQL", sql, es);
 	}
 */
-  
+
 }
 
 /*
@@ -659,7 +639,6 @@ dummyAcquireSampleRowsFunc(Relation relation, int elevel,
 							  double *totalrows,
 							  double *totaldeadrows)
 {
-  
   totalrows = 0;
   totaldeadrows = 0;
 	return 0;

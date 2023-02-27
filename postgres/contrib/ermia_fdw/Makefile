@@ -1,36 +1,16 @@
-EXTENSION    = dummy_data
-EXTVERSION   = 2.0
-MODULE_big   = dummy_data
-OBJS         =  dummy_data.o 
-DOCS         = $(wildcard *.md)
+# contrib/ermia_fdw/Makefile
+PGFILEDESC   = "ermia_fdw - foreign data wrapper for ERMIA"
+MODULE_big   = ermia_fdw
+EXTENSION    = ermia_fdw
+REGRESS      = ermia_fdw
+OBJS         = ermia_fdw.o
+DATA 				 = ermia_fdw--1.0.sql
+EXTRA_CLEAN  = sql/ermia_fdw.sql expected/ermia_fdw.out
+PG_LDFLAGS  += -L/home/khuang/projects/skeena/ermia/build/lib
+SHLIB_LINK   = -lermia_si -lthread_pool
 
-BUILD_DIR = $(shell pwd)
-
-LOADLOCAL=dummy_data--1.0.sql
-
-all: $(LOADLOCAL) $(EXTENSION)--$(EXTVERSION).sql
-
-install: 
-
-clobber:: clean 
-	-rm dummy_data--1.0.sql
-
-# backwards compatibility: loading the library from the build directory
-$(LOADLOCAL) : $(LOADLOCAL).in
-	cat $< | sed 's@BUILD_DIR@$(BUILD_DIR)@' > $@
-
-$(EXTENSION)--$(EXTVERSION).sql : $(EXTENSION).sql
-	@cp $< $@
-
-DATA_built = $(EXTENSION)--$(EXTVERSION).sql
-# DATA= $(EXTENSION).sql
-PG_CONFIG ?= pg_config
-REGRESS      = dummy_data_test dummy_data_test2
-
-PG_TEST_VERSION ?= $(MAJORVERSION)
-REGRESS_OPTS = --inputdir=sql --load-language=plpgsql --dbname=regression
-
-subdir = contrib/ermia_fdw
 top_builddir = ../..
+subdir       = contrib/ermia_fdw
+
 include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
