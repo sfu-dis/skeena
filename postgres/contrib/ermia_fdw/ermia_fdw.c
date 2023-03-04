@@ -1,110 +1,68 @@
-/*
- * The dummy Foreign Data Wrapper allows you
- * to test foreign data wrappers.
- */
+/* Copyright (c) 2019, 2020, Simon Fraser University. All rights reserved.
+  Copyright (c) 2004, 2017, Oracle and/or its affiliates. All rights reserved.
 
-#include "postgres.h"
-#include "access/sysattr.h"
-#include "catalog/pg_foreign_server.h"
-#include "catalog/pg_foreign_table.h"
-#include "catalog/pg_type.h"
-#include "commands/explain.h"
-#include "commands/event_trigger.h"
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License, version 2.0,
+  as published by the Free Software Foundation.
+
+  This program is also distributed with certain software (including
+  but not limited to OpenSSL) that is licensed under separate terms,
+  as designated in a particular file or component or in included license
+  documentation.  The authors of MySQL hereby grant you an additional
+  permission to link the program and your derivative works with the
+  separately licensed software that they have included with MySQL.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License, version 2.0, for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
+
+#include "ermia_fdw.h"
+#include "ermia_api.h"
+
 #include "foreign/fdwapi.h"
-#include "foreign/foreign.h"
-#include "nodes/pg_list.h"
-#include "nodes/makefuncs.h"
-#include "optimizer/appendinfo.h"
-#include "optimizer/paths.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/planmain.h"
 #include "optimizer/restrictinfo.h"
-#include "parser/parsetree.h"
+#include "funcapi.h"
+#include "utils/rel.h"
+#include "nodes/makefuncs.h"
+
+#include "access/detoast.h"
+#include "access/heaptoast.h"
+#include "catalog/pg_operator.h"
+#include "utils/syscache.h"
+#include "access/table.h"
 
 PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(ermia_fdw_handler);
-PG_FUNCTION_INFO_V1(ermia_ddl_event_end_trigger);
 
 /*
  * FDW functions declarations
  */
 
-static void dummyGetForeignRelSize(PlannerInfo *root,
+static void ermiaGetForeignRelSize(PlannerInfo *root,
 						   RelOptInfo *baserel,
 						   Oid foreigntableid);
-static void dummyGetForeignPaths(PlannerInfo *root,
+static void ermiaGetForeignPaths(PlannerInfo *root,
 						 RelOptInfo *baserel,
 						 Oid foreigntableid);
-#if (PG_VERSION_NUM <= 90500)
-static ForeignScan *dummyGetForeignPlan(PlannerInfo *root,
-						RelOptInfo *baserel,
-						Oid foreigntableid,
-						ForeignPath *best_path,
-						List *tlist,
-						List *scan_clauses);
-
-#else
-static ForeignScan *dummyGetForeignPlan(PlannerInfo *root,
+static ForeignScan *ermiaGetForeignPlan(PlannerInfo *root,
 						RelOptInfo *baserel,
 						Oid foreigntableid,
 						ForeignPath *best_path,
 						List *tlist,
 						List *scan_clauses,
 						Plan *outer_plan);
-#endif
-static void dummyBeginForeignScan(ForeignScanState *node, int eflags);
-static TupleTableSlot *dummyIterateForeignScan(ForeignScanState *node);
-static void dummyReScanForeignScan(ForeignScanState *node);
-static void dummyEndForeignScan(ForeignScanState *node);
-
-
-/*
- * FDW callback routines
- */
-static void dummyAddForeignUpdateTargets(PlannerInfo *root,
-								Index rtindex,
-								RangeTblEntry *target_rte,
-								Relation target_relation);
-static List *dummyPlanForeignModify(PlannerInfo *root,
-						  ModifyTable *plan,
-						  Index resultRelation,
-						  int subplan_index);
-static void dummyBeginForeignModify(ModifyTableState *mtstate,
-						   ResultRelInfo *resultRelInfo,
-						   List *fdw_private,
-						   int subplan_index,
-						   int eflags);
-static TupleTableSlot *dummyExecForeignInsert(EState *estate,
-						  ResultRelInfo *resultRelInfo,
-						  TupleTableSlot *slot,
-						  TupleTableSlot *planSlot);
-static TupleTableSlot *dummyExecForeignUpdate(EState *estate,
-						  ResultRelInfo *resultRelInfo,
-						  TupleTableSlot *slot,
-						  TupleTableSlot *planSlot);
-static TupleTableSlot *dummyExecForeignDelete(EState *estate,
-						  ResultRelInfo *resultRelInfo,
-						  TupleTableSlot *slot,
-						  TupleTableSlot *planSlot);
-static void dummyEndForeignModify(EState *estate,
-						 ResultRelInfo *resultRelInfo);
-static int	dummyIsForeignRelUpdatable(Relation rel);
-static void dummyExplainForeignScan(ForeignScanState *node,
-						   ExplainState *es);
-static void dummyExplainForeignModify(ModifyTableState *mtstate,
-							 ResultRelInfo *rinfo,
-							 List *fdw_private,
-							 int subplan_index,
-							 ExplainState *es);
-static bool dummyAnalyzeForeignTable(Relation relation,
-							AcquireSampleRowsFunc *func,
-							BlockNumber *totalpages);
-static int dummyAcquireSampleRowsFunc(Relation relation, int elevel,
-							  HeapTuple *rows, int targrows,
-							  double *totalrows,
-							  double *totaldeadrows);
-static void ermiaValidateTableDef(Node* obj);
+static void ermiaBeginForeignScan(ForeignScanState *node, int eflags);
+static TupleTableSlot *ermiaIterateForeignScan(ForeignScanState *node);
+static void ermiaReScanForeignScan(ForeignScanState *node);
+static void ermiaEndForeignScan(ForeignScanState *node);
 
 /* magic */
 enum FdwScanPrivateIndex
@@ -141,13 +99,13 @@ Datum ermia_fdw_handler(PG_FUNCTION_ARGS)
 	FdwRoutine *fdw_routine = makeNode(FdwRoutine);
 
 	/* Functions for scanning foreign tables */
-	fdw_routine->GetForeignRelSize = dummyGetForeignRelSize;
-	fdw_routine->GetForeignPaths = dummyGetForeignPaths;
-	fdw_routine->GetForeignPlan = dummyGetForeignPlan;
-	fdw_routine->BeginForeignScan = dummyBeginForeignScan;
-	fdw_routine->IterateForeignScan = dummyIterateForeignScan;
-	fdw_routine->ReScanForeignScan = dummyReScanForeignScan;
-	fdw_routine->EndForeignScan = dummyEndForeignScan;
+	fdw_routine->GetForeignRelSize = ermiaGetForeignRelSize;
+	fdw_routine->GetForeignPaths = ermiaGetForeignPaths;
+	fdw_routine->GetForeignPlan = ermiaGetForeignPlan;
+	fdw_routine->BeginForeignScan = ermiaBeginForeignScan;
+	fdw_routine->IterateForeignScan = ermiaIterateForeignScan;
+	fdw_routine->ReScanForeignScan = ermiaReScanForeignScan;
+	fdw_routine->EndForeignScan = ermiaEndForeignScan;
 
 	/*
 	 * Remaining functions are optional. Set the pointer to NULL for any that are not provided.
@@ -173,35 +131,12 @@ Datum ermia_fdw_handler(PG_FUNCTION_ARGS)
 	PG_RETURN_POINTER(fdw_routine);
 }
 
-Datum ermia_ddl_event_end_trigger(PG_FUNCTION_ARGS) {
-	/* error if event trigger manager did not call this function */
-	if (!CALLED_AS_EVENT_TRIGGER(fcinfo)) {
-		ereport(ERROR, errmsg("trigger not fired by event trigger manager"));
-	}
-
-	EventTriggerData* triggerData = (EventTriggerData*) fcinfo->context;
-	Node* parseTree = triggerData->parsetree;
-
-	if (nodeTag(parseTree) == T_CreateForeignServerStmt) {
-		CreateForeignServerStmt* serverStmt = (CreateForeignServerStmt*) parseTree;
-		if (strncmp(serverStmt->fdwname, "ermia_fdw", NAMEDATALEN) == 0) {
-elog(ERROR, "I want to create ermia SERVER.");
-		}
-	} else if (nodeTag(parseTree) == T_CreateForeignTableStmt) {
-		CreateForeignTableStmt* tableStmt = (CreateForeignTableStmt*) parseTree;
-		ForeignServer* server = GetForeignServerByName(tableStmt->servername, false);
-elog(ERROR, "I want to create ermia TABLE.");
-	}
-
-	PG_RETURN_NULL();
-}
-
 /*
  * GetForeignRelSize
  *		set relation size estimates for a foreign table
  */
 static void
-dummyGetForeignRelSize(PlannerInfo *root,
+ermiaGetForeignRelSize(PlannerInfo *root,
 						   RelOptInfo *baserel,
 						   Oid foreigntableid)
 {
@@ -213,7 +148,7 @@ dummyGetForeignRelSize(PlannerInfo *root,
  *		create access path for a scan on the foreign table
  */
 static void
-dummyGetForeignPaths(PlannerInfo *root,
+ermiaGetForeignPaths(PlannerInfo *root,
 						 RelOptInfo *baserel,
 						 Oid foreigntableid)
 {
@@ -224,21 +159,8 @@ dummyGetForeignPaths(PlannerInfo *root,
  * GetForeignPlan
  *	create a ForeignScan plan node
  */
-#if (PG_VERSION_NUM <= 90500)
 static ForeignScan *
-dummyGetForeignPlan(PlannerInfo *root,
-						RelOptInfo *baserel,
-						Oid foreigntableid,
-						ForeignPath *best_path,
-						List *tlist,
-						List *scan_clauses)
-{
-	// TODO
-	return NULL;
-}
-#else
-static ForeignScan *
-dummyGetForeignPlan(PlannerInfo *root,
+ermiaGetForeignPlan(PlannerInfo *root,
 						RelOptInfo *baserel,
 						Oid foreigntableid,
 						ForeignPath *best_path,
@@ -249,18 +171,7 @@ dummyGetForeignPlan(PlannerInfo *root,
 	// TODO
 	return NULL;
 }
-#endif
-/*
- * ExplainForeignScan
- *   no extra info explain plan
- */
-/*
-static void
-dummyExplainForeignScan(ForeignScanState *node, ExplainState *es)
-{
-}
 
-*/
 /*
  * BeginForeignScan
  *   called during executor startup. perform any initialization
@@ -268,12 +179,10 @@ dummyExplainForeignScan(ForeignScanState *node, ExplainState *es)
  */
 
 static void
-dummyBeginForeignScan(ForeignScanState *node, int eflags)
+ermiaBeginForeignScan(ForeignScanState *node, int eflags)
 {
 	// TODO
 }
-
-
 
 /*
  * IterateForeignScan
@@ -284,7 +193,7 @@ dummyBeginForeignScan(ForeignScanState *node, int eflags)
  *  Return NULL if no more rows are available.
  */
 static TupleTableSlot *
-dummyIterateForeignScan(ForeignScanState *node)
+ermiaIterateForeignScan(ForeignScanState *node)
 {
 	// TODO
 	return NULL;
@@ -295,7 +204,7 @@ dummyIterateForeignScan(ForeignScanState *node)
  *		Restart the scan from the beginning
  */
 static void
-dummyReScanForeignScan(ForeignScanState *node)
+ermiaReScanForeignScan(ForeignScanState *node)
 {
 	// TODO
 }
@@ -305,302 +214,7 @@ dummyReScanForeignScan(ForeignScanState *node)
  *	End the scan and release resources.
  */
 static void
-dummyEndForeignScan(ForeignScanState *node)
+ermiaEndForeignScan(ForeignScanState *node)
 {
 	// TODO
 }
-
-
-/*
- * postgresAddForeignUpdateTargets
- *    Add resjunk column(s) needed for update/delete on a foreign table
- */
-static void
-dummyAddForeignUpdateTargets(PlannerInfo *root,
-								Index rtindex,
-								RangeTblEntry *target_rte,
-								Relation target_relation)
-{
-	Var		   *var;
-
-	/*
-	 * In postgres_fdw, what we need is the ctid, same as for a regular table.
-	 */
-
-	/* Make a Var representing the desired value */
-	var = makeVar(rtindex,
-				  SelfItemPointerAttributeNumber,
-				  TIDOID,
-				  -1,
-				  InvalidOid,
-				  0);
-
-	/* Register it as a row-identity column needed by this target rel */
-	add_row_identity_var(root, var, rtindex, "ctid");
-}
-
-/*
- * dummyPlanForeignModify
- *		Plan an insert/update/delete operation on a foreign table
- *
- * Note: currently, the plan tree generated for UPDATE/DELETE will always
- * include a ForeignScan that retrieves ctids (using SELECT FOR UPDATE)
- * and then the ModifyTable node will have to execute individual remote
- * UPDATE/DELETE commands.  If there are no local conditions or joins
- * needed, it'd be better to let the scan node do UPDATE/DELETE RETURNING
- * and then do nothing at ModifyTable.  Room for future optimization ...
- */
-static List *
-dummyPlanForeignModify(PlannerInfo *root,
-						  ModifyTable *plan,
-						  Index resultRelation,
-						  int subplan_index)
-{
-/*
-	CmdType		operation = plan->operation;
-	RangeTblEntry *rte = planner_rt_fetch(resultRelation, root);
-	Relation	rel;
-*/
-	List	   *targetAttrs = NIL;
-	List	   *returningList = NIL;
-	List	   *retrieved_attrs = NIL;
-
-	StringInfoData sql;
-	initStringInfo(&sql);
-
-	/*
-	 * Core code already has some lock on each rel being planned, so we can
-	 * use NoLock here.
-	 */
-//	rel = heap_open(rte->relid, NoLock);
-
-	/*
-	 * In an INSERT, we transmit all columns that are defined in the foreign
-	 * table.  In an UPDATE, we transmit only columns that were explicitly
-	 * targets of the UPDATE, so as to avoid unnecessary data transmission.
-	 * (We can't do that for INSERT since we would miss sending default values
-	 * for columns not listed in the source statement.)
-	 */
-/*
-	if (operation == CMD_INSERT)
-	{
-		TupleDesc	tupdesc = RelationGetDescr(rel);
-		int			attnum;
-
-		for (attnum = 1; attnum <= tupdesc->natts; attnum++)
-		{
-			Form_pg_attribute attr = tupdesc->attrs[attnum - 1];
-
-			if (!attr->attisdropped)
-				targetAttrs = lappend_int(targetAttrs, attnum);
-		}
-	}
-	else if (operation == CMD_UPDATE)
-	{
-		Bitmapset  *tmpset = bms_copy(rte->modifiedCols);
-		AttrNumber	col;
-
-		while ((col = bms_first_member(tmpset)) >= 0)
-		{
-			col += FirstLowInvalidHeapAttributeNumber;
-			if (col <= InvalidAttrNumber)		// shouldn't happen
-				elog(ERROR, "system-column update is not supported");
-			targetAttrs = lappend_int(targetAttrs, col);
-		}
-	}
-*/
-
-	/*
-	 * Extract the relevant RETURNING list if any.
-	 */
-/*
-	if (plan->returningLists)
-		returningList = (List *) list_nth(plan->returningLists, subplan_index);
-*/
-
-	/*
-	 * Construct the SQL command string.
-	 */
-/*
-	switch (operation)
-	{
-		case CMD_INSERT:
-			deparseInsertSql(&sql, root, resultRelation, rel,
-							 targetAttrs, returningList,
-							 &retrieved_attrs);
-			break;
-		case CMD_UPDATE:
-			deparseUpdateSql(&sql, root, resultRelation, rel,
-							 targetAttrs, returningList,
-							 &retrieved_attrs);
-			break;
-		case CMD_DELETE:
-			deparseDeleteSql(&sql, root, resultRelation, rel,
-							 returningList,
-							 &retrieved_attrs);
-			break;
-		default:
-			elog(ERROR, "unexpected operation: %d", (int) operation);
-			break;
-	}
-
-	heap_close(rel, NoLock);
-*/
-
-	/*
-	 * Build the fdw_private list that will be available to the executor.
-	 * Items in the list must match enum FdwModifyPrivateIndex, above.
-	 */
-	return list_make4(makeString(sql.data),
-					  targetAttrs,
-					  makeInteger((returningList != NIL)),
-					  retrieved_attrs);
-}
-
-/*
- * dummyBeginForeignModify
- *		Begin an insert/update/delete operation on a foreign table
- */
-static void
-dummyBeginForeignModify(ModifyTableState *mtstate,
-						   ResultRelInfo *resultRelInfo,
-						   List *fdw_private,
-						   int subplan_index,
-						   int eflags)
-{
-		return;
-}
-
-/*
- * dummyExecForeignInsert
- *		Insert one row into a foreign table
- */
-static TupleTableSlot *
-dummyExecForeignInsert(EState *estate,
-						  ResultRelInfo *resultRelInfo,
-						  TupleTableSlot *slot,
-						  TupleTableSlot *planSlot)
-{
-	return NULL;
-}
-
-/*
- * dummyExecForeignUpdate
- *		Update one row in a foreign table
- */
-static TupleTableSlot *
-dummyExecForeignUpdate(EState *estate,
-						  ResultRelInfo *resultRelInfo,
-						  TupleTableSlot *slot,
-						  TupleTableSlot *planSlot)
-{
-	return NULL;
-}
-
-/*
- * dummyExecForeignDelete
- *		Delete one row from a foreign table
- */
-static TupleTableSlot *
-dummyExecForeignDelete(EState *estate,
-						  ResultRelInfo *resultRelInfo,
-						  TupleTableSlot *slot,
-						  TupleTableSlot *planSlot)
-{
-	return NULL;
-}
-
-/*
- * dummyEndForeignModify
- *		Finish an insert/update/delete operation on a foreign table
- */
-static void
-dummyEndForeignModify(EState *estate,
-						 ResultRelInfo *resultRelInfo)
-{
-	return;
-}
-
-/*
- * dummyIsForeignRelUpdatable
- *  Assume table is updatable regardless of settings.
- *		Determine whether a foreign table supports INSERT, UPDATE and/or
- *		DELETE.
- */
-static int
-dummyIsForeignRelUpdatable(Relation rel)
-{
-	/* updatable is INSERT, UPDATE and DELETE.
-	 */
-	return (1 << CMD_INSERT) | (1 << CMD_UPDATE) | (1 << CMD_DELETE) ;
-}
-
-/*
- * dummyExplainForeignScan
- *		Produce extra output for EXPLAIN of a ForeignScan on a foreign table
- */
-static void
-dummyExplainForeignScan(ForeignScanState *node, ExplainState *es)
-{
-/*
-	List	   *fdw_private;
-	char	   *sql;
-
-	if (es->verbose)
-	{
-		fdw_private = ((ForeignScan *) node->ss.ps.plan)->fdw_private;
-		sql = strVal(list_nth(fdw_private, FdwScanPrivateSelectSql));
-		ExplainPropertyText("Dummy SQL", sql, es);
-	}
-*/
-
-}
-
-/*
- * dummyExplainForeignModify
- *		Produce extra output for EXPLAIN of a ModifyTable on a foreign table
- */
-static void
-dummyExplainForeignModify(ModifyTableState *mtstate,
-							 ResultRelInfo *rinfo,
-							 List *fdw_private,
-							 int subplan_index,
-							 ExplainState *es)
-{
-	if (es->verbose)
-	{
-		char	   *sql = strVal(list_nth(fdw_private,
-										  FdwModifyPrivateUpdateSql));
-
-		ExplainPropertyText("Dummy SQL", sql, es);
-	}
-}
-
-
-/*
- * dummyAnalyzeForeignTable
- *		Test whether analyzing this foreign table is supported
- */
-static bool
-dummyAnalyzeForeignTable(Relation relation,
-							AcquireSampleRowsFunc *func,
-							BlockNumber *totalpages)
-{
-  *func = dummyAcquireSampleRowsFunc ;
-	return false;
-}
-
-/*
- * Acquire a random sample of rows
- */
-static int
-dummyAcquireSampleRowsFunc(Relation relation, int elevel,
-							  HeapTuple *rows, int targrows,
-							  double *totalrows,
-							  double *totaldeadrows)
-{
-  totalrows = 0;
-  totaldeadrows = 0;
-	return 0;
-}
-
