@@ -9,6 +9,7 @@
 #include "catalog/pg_foreign_table.h"
 #include "catalog/pg_type.h"
 #include "commands/explain.h"
+#include "commands/event_trigger.h"
 #include "foreign/fdwapi.h"
 #include "foreign/foreign.h"
 #include "nodes/pg_list.h"
@@ -22,11 +23,8 @@
 
 PG_MODULE_MAGIC;
 
-extern "C" Datum ermia_fdw_handler(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(ermia_fdw_handler);
-
-void		_PG_init(void);
-void		_PG_fini(void);
+PG_FUNCTION_INFO_V1(ermia_ddl_event_end_trigger);
 
 /*
  * FDW functions declarations
@@ -138,15 +136,6 @@ enum FdwModifyPrivateIndex
   FdwModifyPrivateRetrievedAttrs
 };
 
-
-void _PG_init()
-{
-}
-
-void _PG_fini()
-{
-}
-
 Datum ermia_fdw_handler(PG_FUNCTION_ARGS)
 {
 	FdwRoutine *fdw_routine = makeNode(FdwRoutine);
@@ -163,9 +152,6 @@ Datum ermia_fdw_handler(PG_FUNCTION_ARGS)
 	/*
 	 * Remaining functions are optional. Set the pointer to NULL for any that are not provided.
 	 */
-
-	/* Functions for creating foreign tables */
-	// fdw_routine->ValidateTableDef = ermiaValidateTableDef;
 
 	/* Functions for updating foreign tables */
 	fdw_routine->AddForeignUpdateTargets = NULL;
@@ -187,24 +173,27 @@ Datum ermia_fdw_handler(PG_FUNCTION_ARGS)
 	PG_RETURN_POINTER(fdw_routine);
 }
 
-/*
- * @brief: Validate table definition
- * @param obj: A Obj including infomation to validate when alter tabel and create table.
- */
-static void ermiaValidateTableDef(Node* obj)
-{
-	if (obj == NULL) {
-		return;
+Datum ermia_ddl_event_end_trigger(PG_FUNCTION_ARGS) {
+	/* error if event trigger manager did not call this function */
+	if (!CALLED_AS_EVENT_TRIGGER(fcinfo)) {
+		ereport(ERROR, errmsg("trigger not fired by event trigger manager"));
 	}
 
-	switch (nodeTag(obj)) {
-		case T_CreateForeignTableStmt: {
-			elog(ERROR, "We need to invoke ermia::Engine::CreateTable(const char *name)");
-			break;
+	EventTriggerData* triggerData = (EventTriggerData*) fcinfo->context;
+	Node* parseTree = triggerData->parsetree;
+
+	if (nodeTag(parseTree) == T_CreateForeignServerStmt) {
+		CreateForeignServerStmt* serverStmt = (CreateForeignServerStmt*) parseTree;
+		if (strncmp(serverStmt->fdwname, "ermia_fdw", NAMEDATALEN) == 0) {
+elog(ERROR, "I want to create ermia SERVER.");
 		}
-		default:
-			elog(ERROR, "unsupported node type: %u", nodeTag(obj));
+	} else if (nodeTag(parseTree) == T_CreateForeignTableStmt) {
+		CreateForeignTableStmt* tableStmt = (CreateForeignTableStmt*) parseTree;
+		ForeignServer* server = GetForeignServerByName(tableStmt->servername, false);
+elog(ERROR, "I want to create ermia TABLE.");
 	}
+
+	PG_RETURN_NULL();
 }
 
 /*
