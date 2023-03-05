@@ -809,6 +809,18 @@ AC_MSG_RESULT([$enable_thread_safety])
 AC_SUBST(enable_thread_safety)
 
 #
+# Enable ERMIA engine and ermia_fdw
+#
+AC_MSG_CHECKING([enable ERMIA engine and ermia_fdw])
+PGAC_ARG_BOOL(enable, ermia, yes, [enable ERMIA engine and ermia_fdw])
+if test "$enable_ermia" = yes; then
+  AC_DEFINE([ENABLE_ERMIA], 1,
+          [Define to 1 to build ERMIA engine and ermia_fdw. (--enable-ermia)])
+fi
+AC_MSG_RESULT([$enable_ermia])
+AC_SUBST(enable_ermia)
+
+#
 # ICU
 #
 AC_MSG_CHECKING([whether to build with ICU support])

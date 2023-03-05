@@ -124,6 +124,9 @@
 #include "storage/pg_shmem.h"
 #include "storage/pmsignal.h"
 #include "storage/proc.h"
+#ifdef ENABLE_ERMIA
+#include "storage/ermia/ermia_fdw.h"
+#endif
 #include "tcop/tcopprot.h"
 #include "utils/builtins.h"
 #include "utils/datetime.h"
@@ -1445,6 +1448,11 @@ PostmasterMain(int argc, char *argv[])
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("postmaster became multithreaded during startup"),
 				 errhint("Set the LC_ALL environment variable to a valid locale.")));
+#endif
+
+#ifdef ENABLE_ERMIA
+    /* Initialize the ERMIA engine */
+    InitERMIA();
 #endif
 
 	/*

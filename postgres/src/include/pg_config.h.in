@@ -45,6 +45,9 @@
 /* Define to the file name extension of dynamically-loadable modules. */
 #undef DLSUFFIX
 
+/* Define to 1 to build ERMIA engine and ermia_fdw. (--enable-ermia) */
+#undef ENABLE_ERMIA
+
 /* Define to build with GSSAPI support. (--with-gssapi) */
 #undef ENABLE_GSS
 
