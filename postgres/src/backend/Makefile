@@ -196,6 +196,10 @@ distprep:
 ##########################################################################
 
 install: all installdirs install-bin
+ifeq ($(enable_mot), yes)
+	$(MAKE) -C $(top_builddir)/src/backend/storage/ermia/fdw_adapter install
+endif
+
 ifeq ($(PORTNAME), cygwin)
 ifeq ($(MAKE_DLL), true)
 	$(INSTALL_DATA) libpostgres.a '$(DESTDIR)$(libdir)/libpostgres.a'
@@ -280,7 +284,9 @@ endif
 ifeq ($(with_llvm), yes)
 	$(call uninstall_llvm_module,postgres)
 endif
-
+ifeq ($(enable_ermia), yes)
+	$(MAKE) -C $(top_builddir)/src/backend/storage/ermia/fdw_adapter uninstall
+endif
 
 ##########################################################################
 

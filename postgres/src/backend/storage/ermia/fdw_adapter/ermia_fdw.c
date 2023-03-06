@@ -21,8 +21,7 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include "ermia_fdw.h"
-#include "ermia_api.h"
+#include "postgres.h"
 
 #include "foreign/fdwapi.h"
 #include "optimizer/pathnode.h"
@@ -217,4 +216,13 @@ static void
 ermiaEndForeignScan(ForeignScanState *node)
 {
 	// TODO
+}
+
+/*
+ * Initializes the engine.
+ */
+void InitERMIA()
+{
+	elog(LOG, "Hello ERMIA!");
+  // InitMOTHandler();
 }
