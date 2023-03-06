@@ -37,6 +37,8 @@
 #include "utils/syscache.h"
 #include "access/table.h"
 
+static void InitERMIAHandler();
+
 PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(ermia_fdw_handler);
@@ -223,6 +225,11 @@ ermiaEndForeignScan(ForeignScanState *node)
  */
 void InitERMIA()
 {
-	elog(LOG, "Hello ERMIA!");
-  // InitMOTHandler();
+  InitERMIAHandler();
+}
+
+static void InitERMIAHandler()
+{
+	elog(LOG, "!!!InitERMIAHandler()!!!");
+	// ERMIAAdaptor::Init();
 }
