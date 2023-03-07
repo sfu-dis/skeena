@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../dbcore/sm-log-recover-impl.h"
+#include "dbcore/sm-log-recover-impl.h"
 #include "txn.h"
-#include "../benchmarks/record/encoder.h"
-#include "../dbcore/sm-dir-it.h"
+#include "benchmarks/record/encoder.h"
+#include "dbcore/sm-dir-it.h"
 #include "ermia_internal.h"
 
 namespace ermia {
