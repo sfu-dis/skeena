@@ -1,25 +1,25 @@
 /* Copyright (c) 2019, 2020, Simon Fraser University. All rights reserved.
-  Copyright (c) 2004, 2017, Oracle and/or its affiliates. All rights reserved.
+	Copyright (c) 2004, 2017, Oracle and/or its affiliates. All rights reserved.
 
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License, version 2.0,
-  as published by the Free Software Foundation.
+	This program is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License, version 2.0,
+	as published by the Free Software Foundation.
 
-  This program is also distributed with certain software (including
-  but not limited to OpenSSL) that is licensed under separate terms,
-  as designated in a particular file or component or in included license
-  documentation.  The authors of MySQL hereby grant you an additional
-  permission to link the program and your derivative works with the
-  separately licensed software that they have included with MySQL.
+	This program is also distributed with certain software (including
+	but not limited to OpenSSL) that is licensed under separate terms,
+	as designated in a particular file or component or in included license
+	documentation.  The authors of MySQL hereby grant you an additional
+	permission to link the program and your derivative works with the
+	separately licensed software that they have included with MySQL.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License, version 2.0, for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License, version 2.0, for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 #include "ermia_api.h"
 
 #include "postgres.h"
@@ -38,8 +38,6 @@
 #include "utils/syscache.h"
 #include "access/table.h"
 
-static void InitERMIAHandler();
-
 PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(ermia_fdw_handler);
@@ -49,18 +47,18 @@ PG_FUNCTION_INFO_V1(ermia_fdw_handler);
  */
 
 static void ermiaGetForeignRelSize(PlannerInfo *root,
-						   RelOptInfo *baserel,
-						   Oid foreigntableid);
+																	 RelOptInfo *baserel,
+																	 Oid foreigntableid);
 static void ermiaGetForeignPaths(PlannerInfo *root,
-						 RelOptInfo *baserel,
-						 Oid foreigntableid);
+																 RelOptInfo *baserel,
+																 Oid foreigntableid);
 static ForeignScan *ermiaGetForeignPlan(PlannerInfo *root,
-						RelOptInfo *baserel,
-						Oid foreigntableid,
-						ForeignPath *best_path,
-						List *tlist,
-						List *scan_clauses,
-						Plan *outer_plan);
+																				RelOptInfo *baserel,
+																				Oid foreigntableid,
+																				ForeignPath *best_path,
+																				List *tlist,
+																				List *scan_clauses,
+																				Plan *outer_plan);
 static void ermiaBeginForeignScan(ForeignScanState *node, int eflags);
 static TupleTableSlot *ermiaIterateForeignScan(ForeignScanState *node);
 static void ermiaReScanForeignScan(ForeignScanState *node);
@@ -69,10 +67,10 @@ static void ermiaEndForeignScan(ForeignScanState *node);
 /* magic */
 enum FdwScanPrivateIndex
 {
-  /* SQL statement to execute remotely (as a String node) */
-  FdwScanPrivateSelectSql,
-  /* Integer list of attribute numbers retrieved by the SELECT */
-  FdwScanPrivateRetrievedAttrs
+	/* SQL statement to execute remotely (as a String node) */
+	FdwScanPrivateSelectSql,
+	/* Integer list of attribute numbers retrieved by the SELECT */
+	FdwScanPrivateRetrievedAttrs
 };
 /*
  * Similarly, this enum describes what's kept in the fdw_private list for
@@ -86,14 +84,14 @@ enum FdwScanPrivateIndex
  */
 enum FdwModifyPrivateIndex
 {
-  /* SQL statement to execute remotely (as a String node) */
-  FdwModifyPrivateUpdateSql,
-  /* Integer list of target attribute numbers for INSERT/UPDATE */
-  FdwModifyPrivateTargetAttnums,
-  /* has-returning flag (as an integer Value node) */
-  FdwModifyPrivateHasReturning,
-  /* Integer list of attribute numbers retrieved by RETURNING */
-  FdwModifyPrivateRetrievedAttrs
+	/* SQL statement to execute remotely (as a String node) */
+	FdwModifyPrivateUpdateSql,
+	/* Integer list of target attribute numbers for INSERT/UPDATE */
+	FdwModifyPrivateTargetAttnums,
+	/* has-returning flag (as an integer Value node) */
+	FdwModifyPrivateHasReturning,
+	/* Integer list of attribute numbers retrieved by RETURNING */
+	FdwModifyPrivateRetrievedAttrs
 };
 
 Datum ermia_fdw_handler(PG_FUNCTION_ARGS)
@@ -139,8 +137,8 @@ Datum ermia_fdw_handler(PG_FUNCTION_ARGS)
  */
 static void
 ermiaGetForeignRelSize(PlannerInfo *root,
-						   RelOptInfo *baserel,
-						   Oid foreigntableid)
+											 RelOptInfo *baserel,
+											 Oid foreigntableid)
 {
 	// TODO
 }
@@ -151,8 +149,8 @@ ermiaGetForeignRelSize(PlannerInfo *root,
  */
 static void
 ermiaGetForeignPaths(PlannerInfo *root,
-						 RelOptInfo *baserel,
-						 Oid foreigntableid)
+										 RelOptInfo *baserel,
+										 Oid foreigntableid)
 {
 	// TODO
 }
@@ -163,12 +161,12 @@ ermiaGetForeignPaths(PlannerInfo *root,
  */
 static ForeignScan *
 ermiaGetForeignPlan(PlannerInfo *root,
-						RelOptInfo *baserel,
-						Oid foreigntableid,
-						ForeignPath *best_path,
-						List *tlist,
-						List *scan_clauses,
-						Plan *outer_plan)
+										RelOptInfo *baserel,
+										Oid foreigntableid,
+										ForeignPath *best_path,
+										List *tlist,
+										List *scan_clauses,
+										Plan *outer_plan)
 {
 	// TODO
 	return NULL;
@@ -226,10 +224,18 @@ ermiaEndForeignScan(ForeignScanState *node)
  */
 void InitERMIA(void)
 {
-  InitERMIAHandler();
+	ERMIAAdaptorInit();
 }
 
-static void InitERMIAHandler(void)
+/*
+ * Terminates the engine.
+ */
+void TermERMIA(void)
 {
-	ERMIAAdaptorInit();
+	if (!ERMIAAdaptorExists())
+	{
+		return;
+	}
+
+	ERMIAAdaptorDestroy();
 }

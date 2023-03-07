@@ -809,13 +809,43 @@ AC_MSG_RESULT([$enable_thread_safety])
 AC_SUBST(enable_thread_safety)
 
 #
+# Build configs required by ERMIA
+#
+PGAC_ARG_REQ(with, ermia, [DIR], [look for ERMIA headers and libs in DIR],
+             [ERMIA_DIR=$withval])
+
+#
 # Enable ERMIA engine and ermia_fdw
 #
 AC_MSG_CHECKING([enable ERMIA engine and ermia_fdw])
 PGAC_ARG_BOOL(enable, ermia, yes, [enable ERMIA engine and ermia_fdw])
 if test "$enable_ermia" = yes; then
-  AC_DEFINE([ENABLE_ERMIA], 1,
-          [Define to 1 to build ERMIA engine and ermia_fdw. (--enable-ermia)])
+  if test -d "$ERMIA_DIR"; then
+    ERMIADIR="$ERMIA_DIR"
+    ERMIALIB="$ERMIA_DIR/build/lib"
+  else
+    AC_MSG_ERROR([--enable-ermia=yes, so ERMIA source directory (--with-ermia) must be specified])
+  fi
+
+  AC_DEFINE([ENABLE_ERMIA], 1, [Define to 1 to build ERMIA engine and ermia_fdw. (--enable-ermia)])
+  AC_DEFINE([CACHELINE_SIZE], 64, [Assume 64-byte cache line])
+  AC_DEFINE([MASSTREE], 1, [Use masstree for index])
+  AC_DEFINE([GLOG_NO_ABBREVIATED_SEVERITIES], 1, [Resolve macro conflicts between elog and glog])
+
+  MASSTREEDIR="$ERMIADIR/masstree"
+  SPARSEHASHDIR="$ERMIADIR/third-party/sparsehash/src"
+  GLOGDIR="$ERMIADIR/third-party/glog/include"
+  GLOGLIB="$ERMIADIR/third-party/glog/lib"
+
+  if test "$enable_debug" = yes; then
+    AC_DEFINE([NDEBUG], 1, [Add debug checks])
+    CXXFLAGS="$CXXFLAGS -include $MASSTREEDIR/config-debug.h"
+  else
+    CXXFLAGS="$CXXFLAGS -include $MASSTREEDIR/config-release.h"
+  fi
+
+  INCLUDES="$INCLUDES -I$ERMIADIR -I$MASSTREEDIR -I$SPARSEHASHDIR -I$GLOGDIR"
+  LIBDIRS="$LIBDIRS -L$ERMIALIB -L$GLOGLIB"
 fi
 AC_MSG_RESULT([$enable_ermia])
 AC_SUBST(enable_ermia)

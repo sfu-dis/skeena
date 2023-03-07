@@ -5124,6 +5124,9 @@ ExitPostmaster(int status)
 #endif
 
 	/* should cleanup shared memory and kill all backends */
+#ifdef ENABLE_ERMIA
+	TermERMIA();
+#endif
 
 	/*
 	 * Not sure of the semantics here.  When the Postmaster dies, should the

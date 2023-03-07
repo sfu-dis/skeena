@@ -854,6 +854,7 @@ with_llvm
 enable_depend
 enable_cassert
 enable_thread_safety
+with_ermia
 enable_ermia
 with_icu
 with_tcl
@@ -1575,6 +1576,7 @@ Optional Packages:
                           set WAL block size in kB [8]
   --with-CC=CMD           set compiler (deprecated)
   --with-llvm             build with LLVM based JIT support
+  --with-ermia=DIR        look for ERMIA headers and libs in DIR
   --with-icu              build with ICU support
   --with-tcl              build Tcl modules (PL/Tcl)
   --with-tclconfig=DIR    tclConfig.sh is in DIR
@@ -8144,6 +8146,31 @@ $as_echo "$enable_thread_safety" >&6; }
 
 
 #
+# Build configs required by ERMIA
+#
+
+
+
+# Check whether --with-ermia was given.
+if test "${with_ermia+set}" = set; then :
+  withval=$with_ermia;
+  case $withval in
+    yes)
+      as_fn_error $? "argument required for --with-ermia option" "$LINENO" 5
+      ;;
+    no)
+      as_fn_error $? "argument required for --with-ermia option" "$LINENO" 5
+      ;;
+    *)
+      ERMIA_DIR=$withval
+      ;;
+  esac
+
+fi
+
+
+
+#
 # Enable ERMIA engine and ermia_fdw
 #
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking enable ERMIA engine and ermia_fdw" >&5
@@ -8172,9 +8199,42 @@ fi
 
 
 if test "$enable_ermia" = yes; then
+  if test -d "$ERMIA_DIR"; then
+    ERMIADIR="$ERMIA_DIR"
+    ERMIALIB="$ERMIA_DIR/build/lib"
+  else
+    as_fn_error $? "--enable-ermia=yes, so ERMIA source directory (--with-ermia) must be specified" "$LINENO" 5
+  fi
+
 
 $as_echo "#define ENABLE_ERMIA 1" >>confdefs.h
 
+
+$as_echo "#define CACHELINE_SIZE 64" >>confdefs.h
+
+
+$as_echo "#define MASSTREE 1" >>confdefs.h
+
+
+$as_echo "#define GLOG_NO_ABBREVIATED_SEVERITIES 1" >>confdefs.h
+
+
+  MASSTREEDIR="$ERMIADIR/masstree"
+  SPARSEHASHDIR="$ERMIADIR/third-party/sparsehash/src"
+  GLOGDIR="$ERMIADIR/third-party/glog/include"
+  GLOGLIB="$ERMIADIR/third-party/glog/lib"
+
+  if test "$enable_debug" = yes; then
+
+$as_echo "#define NDEBUG 1" >>confdefs.h
+
+    CXXFLAGS="$CXXFLAGS -include $MASSTREEDIR/config-debug.h"
+  else
+    CXXFLAGS="$CXXFLAGS -include $MASSTREEDIR/config-release.h"
+  fi
+
+  INCLUDES="$INCLUDES -I$ERMIADIR -I$MASSTREEDIR -I$SPARSEHASHDIR -I$GLOGDIR"
+  LIBDIRS="$LIBDIRS -L$ERMIALIB -L$GLOGLIB"
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $enable_ermia" >&5
 $as_echo "$enable_ermia" >&6; }

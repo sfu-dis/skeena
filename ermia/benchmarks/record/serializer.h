@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "../macros.h"
+#include "../../macros.h"
 #include "varint.h"
 
 typedef uint8_t *(*generic_write_fn)(uint8_t *, const uint8_t *);

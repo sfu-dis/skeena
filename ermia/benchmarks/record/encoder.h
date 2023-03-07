@@ -4,7 +4,7 @@
 #include <string>
 #include <stdint.h>
 #include "serializer.h"
-#include "../util.h"
+#include "../../util.h"
 
 #ifdef MASSTREE
 #include "../masstree/str.hh"
