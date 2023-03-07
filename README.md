@@ -1,6 +1,6 @@
 ## Skeena: Efficient and Consistent Cross-Engine Transactions
 
-Skeena enables consistent ACID cross-engine transactions over two database engines (e.g., storage-centric InnoDB and memory-optimized ERMIA, both in MySQL) without intrusive changes to individual engines. 
+Skeena enables consistent ACID cross-engine transactions over two database engines (e.g., storage-centric InnoDB and memory-optimized ERMIA, both in MySQL) without intrusive changes to individual engines.
 
 This repository implements [Skeena](https://www.cs.sfu.ca/~tzwang/skeena.pdf). See details in our [SIGMOD 2022 paper](https://www.cs.sfu.ca/~tzwang/skeena.pdf) below. If you use our work, please cite:
 
@@ -22,6 +22,28 @@ The implementation integrates the [ERMIA](https://github.com/sfu-dis/ermia) (SIG
 
 ### Build MySQL:
 * Follow sample instructions under mysql/ermia-contrib/BUILD
+
+### Build and Run Postgres (WIP):
+1. Build ERMIA first.
+2. Build Postgres.
+```
+$ cd postgres
+$ mkdir build
+$ cd build
+$ ../configure --prefix=/home/$USER/path/to/postgres --enable-ermia=yes --with-ermia=/home/$USER/path/to/skeena/ermia
+$ make
+$ make install
+```
+3. Run Postgres server.
+```
+$ /home/$USER/path/to/postgres/bin/initdb -D /tmp/path/to/postgres/data
+$ LD_PRELOAD=/home/$USER/path/to/skeena/ermia/build/lib/libermia_api.so /home/$USER/path/to/postgres/bin/postgres -D /tmp/path/to/postgres/data
+```
+4. Run Postgres client.
+```
+$ /home/$USER/path/to/postgres/bin/createdb
+$ /home/$USER/path/to/postgres/bin/psql
+```
 
 ### Environment:
 * MySQL settings: follow the mysql/ermia-contrib/my.cnf file and put it in your ~/.my.cnf
