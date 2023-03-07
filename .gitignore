@@ -1,2 +1,3 @@
 .vscode/
 autom4te.cache
+pg_config.h.in~
