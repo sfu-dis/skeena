@@ -828,24 +828,10 @@ if test "$enable_ermia" = yes; then
   fi
 
   AC_DEFINE([ENABLE_ERMIA], 1, [Define to 1 to build ERMIA engine and ermia_fdw. (--enable-ermia)])
-  AC_DEFINE([CACHELINE_SIZE], 64, [Assume 64-byte cache line])
-  AC_DEFINE([MASSTREE], 1, [Use masstree for index])
-  AC_DEFINE([GLOG_NO_ABBREVIATED_SEVERITIES], 1, [Resolve macro conflicts between elog and glog])
 
-  MASSTREEDIR="$ERMIADIR/masstree"
-  SPARSEHASHDIR="$ERMIADIR/third-party/sparsehash/src"
-  GLOGDIR="$ERMIADIR/third-party/glog/include"
-  GLOGLIB="$ERMIADIR/third-party/glog/lib"
-
-  if test "$enable_debug" = yes; then
-    AC_DEFINE([NDEBUG], 1, [Add debug checks])
-    CXXFLAGS="$CXXFLAGS -include $MASSTREEDIR/config-debug.h"
-  else
-    CXXFLAGS="$CXXFLAGS -include $MASSTREEDIR/config-release.h"
-  fi
-
-  INCLUDES="$INCLUDES -I$ERMIADIR -I$MASSTREEDIR -I$SPARSEHASHDIR -I$GLOGDIR"
-  LIBDIRS="$LIBDIRS -L$ERMIALIB -L$GLOGLIB"
+  LDFLAGS="$LDFLAGS -lermia_api"
+  INCLUDES="$INCLUDES -I$ERMIADIR"
+  LIBDIRS="$LIBDIRS -L$ERMIALIB"
 fi
 AC_MSG_RESULT([$enable_ermia])
 AC_SUBST(enable_ermia)

@@ -7,6 +7,8 @@ cmake_minimum_required(VERSION 3.19)
 
 project(ermia)
 
+set(CMAKE_C_STANDARD 99)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -stdlib=libc++ -Woverloaded-virtual -Werror=reorder -Wno-address-of-packed-member")
 set(LINK_FLAGS "-lc++abi -libverbs -lnuma -lpthread -pthread -lrt -lglog -lgflags")
 link_libraries(${LINK_FLAGS})
@@ -37,6 +39,7 @@ add_definitions(-DCACHELINE_SIZE=64)
 
 enable_testing()
 
+include_directories(api4fdw)
 include_directories(dbcore)
 include_directories(masstree)
 include_directories(third-party/sparsehash/src)
@@ -45,6 +48,7 @@ include_directories(third-party/sparsehash/src)
 include_directories(third-party/glog/include)
 include_directories(third-party/gflags/include)
 
+add_subdirectory(api4fdw)
 add_subdirectory(benchmarks)
 add_subdirectory(dbcore)
 add_subdirectory(masstree)
@@ -68,6 +72,8 @@ add_library(thread_pool SHARED ${THREAD_POOL_SRC})
 add_library(ermia_si SHARED ${LIB_ERMIA_SRC})
 add_executable(ermia_SI ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/dbtest.cc)
 target_link_libraries(ermia_SI ermia_si thread_pool)
+
+add_library(ermia_api SHARED ${CMAKE_CURRENT_SOURCE_DIR}/api4fdw/ermia_adaptor.cc)
 
 # Benchmark scripts
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/run.sh" DESTINATION ${CMAKE_BINARY_DIR})

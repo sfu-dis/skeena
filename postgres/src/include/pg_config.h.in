@@ -30,9 +30,6 @@
    Changing BLCKSZ requires an initdb. */
 #undef BLCKSZ
 
-/* Assume 64-byte cache line */
-#undef CACHELINE_SIZE
-
 /* Saved arguments from configure */
 #undef CONFIGURE_ARGS
 
@@ -67,9 +64,6 @@
 #ifdef GETTIMEOFDAY_1ARG
 # define gettimeofday(a,b) gettimeofday(a)
 #endif
-
-/* Resolve macro conflicts between elog and glog */
-#undef GLOG_NO_ABBREVIATED_SEVERITIES
 
 /* Define to 1 if you have the `append_history' function. */
 #undef HAVE_APPEND_HISTORY
@@ -793,17 +787,11 @@
 /* Define to 1 if `locale_t' requires <xlocale.h>. */
 #undef LOCALE_T_IN_XLOCALE
 
-/* Use masstree for index */
-#undef MASSTREE
-
 /* Define as the maximum alignment requirement of any C data type. */
 #undef MAXIMUM_ALIGNOF
 
 /* Define bytes to use libc memset(). */
 #undef MEMSET_LOOP_LIMIT
-
-/* Add debug checks */
-#undef NDEBUG
 
 /* Define to the OpenSSL API version in use. This avoids deprecation warnings
    from newer OpenSSL versions. */

@@ -62,6 +62,14 @@ public:
     t->Abort();
     t->~transaction();
   }
+
+  static void MockInit() {
+    LOG(ERROR) << "Hello ERMIA!";
+  }
+
+  static void MockDestroy() {
+    LOG(ERROR) << "Bye ERMIA!";
+  }
 };
 
 // User-facing table abstraction, operates on OIDs only

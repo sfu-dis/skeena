@@ -8210,31 +8210,9 @@ if test "$enable_ermia" = yes; then
 $as_echo "#define ENABLE_ERMIA 1" >>confdefs.h
 
 
-$as_echo "#define CACHELINE_SIZE 64" >>confdefs.h
-
-
-$as_echo "#define MASSTREE 1" >>confdefs.h
-
-
-$as_echo "#define GLOG_NO_ABBREVIATED_SEVERITIES 1" >>confdefs.h
-
-
-  MASSTREEDIR="$ERMIADIR/masstree"
-  SPARSEHASHDIR="$ERMIADIR/third-party/sparsehash/src"
-  GLOGDIR="$ERMIADIR/third-party/glog/include"
-  GLOGLIB="$ERMIADIR/third-party/glog/lib"
-
-  if test "$enable_debug" = yes; then
-
-$as_echo "#define NDEBUG 1" >>confdefs.h
-
-    CXXFLAGS="$CXXFLAGS -include $MASSTREEDIR/config-debug.h"
-  else
-    CXXFLAGS="$CXXFLAGS -include $MASSTREEDIR/config-release.h"
-  fi
-
-  INCLUDES="$INCLUDES -I$ERMIADIR -I$MASSTREEDIR -I$SPARSEHASHDIR -I$GLOGDIR"
-  LIBDIRS="$LIBDIRS -L$ERMIALIB -L$GLOGLIB"
+  LDFLAGS="$LDFLAGS -lermia_api"
+  INCLUDES="$INCLUDES -I$ERMIADIR"
+  LIBDIRS="$LIBDIRS -L$ERMIALIB"
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $enable_ermia" >&5
 $as_echo "$enable_ermia" >&6; }
