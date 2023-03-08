@@ -74,6 +74,7 @@ add_executable(ermia_SI ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/dbtest.cc)
 target_link_libraries(ermia_SI ermia_si thread_pool)
 
 add_library(ermia_api SHARED ${CMAKE_CURRENT_SOURCE_DIR}/api4fdw/ermia_adaptor.cc)
+target_link_libraries(ermia_api ermia_si thread_pool)
 
 # Benchmark scripts
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/run.sh" DESTINATION ${CMAKE_BINARY_DIR})

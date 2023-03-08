@@ -36,6 +36,8 @@ $ make install
 ```
 3. Run Postgres server.
 ```
+$ rm -rf /temp/path/to/postgres/data/*
+$ rm -rf /temp/path/to/ermia-log/*
 $ /home/$USER/path/to/postgres/bin/initdb -D /tmp/path/to/postgres/data
 $ LD_PRELOAD=/home/$USER/path/to/skeena/ermia/build/lib/libermia_api.so /home/$USER/path/to/postgres/bin/postgres -D /tmp/path/to/postgres/data
 ```

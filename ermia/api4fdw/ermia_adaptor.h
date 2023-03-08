@@ -26,6 +26,9 @@ namespace fdw
      */
     static void Destroy();
 
+    /** @var MOT engine singleton */
+    static ermia::Engine* m_engine;
+
     /** @var indicates if ERMIA engine initialized */
     static bool m_initialized;
   };
