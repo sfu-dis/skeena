@@ -65,6 +65,10 @@
 
 #include "postgres.h"
 
+#ifdef ENABLE_ERMIA
+#include "pg_ermia.h"
+#endif
+
 #include <unistd.h>
 #include <signal.h>
 #include <time.h>
@@ -124,9 +128,6 @@
 #include "storage/pg_shmem.h"
 #include "storage/pmsignal.h"
 #include "storage/proc.h"
-#ifdef ENABLE_ERMIA
-#include "storage/ermia/ermia_fdw.h"
-#endif
 #include "tcop/tcopprot.h"
 #include "utils/builtins.h"
 #include "utils/datetime.h"

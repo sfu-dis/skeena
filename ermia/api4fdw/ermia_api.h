@@ -11,6 +11,7 @@ extern "C"
   extern void ERMIAAdaptorInit();
   extern void ERMIAAdaptorDestroy();
   extern bool ERMIAAdaptorExists();
+  extern void ERMIAAdaptorCreateTable();
 
 #ifdef __cplusplus
 }

@@ -14,6 +14,7 @@
  */
 
 #include "postgres.h"
+#include "pg_ermia.h"
 
 #include "access/detoast.h"
 #include "catalog/pg_language.h"

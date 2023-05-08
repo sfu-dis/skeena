@@ -267,6 +267,9 @@ static void setup_privileges(FILE *cmdfd);
 static void set_info_version(void);
 static void setup_schema(FILE *cmdfd);
 static void load_plpgsql(FILE *cmdfd);
+#ifdef ENABLE_ERMIA
+static void load_ermia_fdw(void); /* load ERMIA fdw */
+#endif
 static void vacuum_db(FILE *cmdfd);
 static void make_template0(FILE *cmdfd);
 static void make_postgres(FILE *cmdfd);
@@ -1779,6 +1782,35 @@ load_plpgsql(FILE *cmdfd)
 	PG_CMD_PUTS("CREATE EXTENSION plpgsql;\n\n");
 }
 
+#ifdef ENABLE_ERMIA
+static void
+load_ermia_fdw(void)
+{
+	int nRet = 0;
+	PG_CMD_DECL;
+
+	fputs(_("loading foreign-data wrapper for ERMIA access ... "), stdout);
+	(void)fflush(stdout);
+
+	// nRet = snprintf_s(
+		// cmd, sizeof(cmd), sizeof(cmd) - 1, "\"%s\" %s template1 >%s 2>&1", backend_exec, backend_options, DEVNULL);
+	snprintf(cmd, sizeof(cmd),
+			 "\"%s\" %s %s template1 >%s",
+			 backend_exec, backend_options, extra_options,
+			 DEVNULL);
+
+	PG_CMD_OPEN;
+
+	PG_CMD_PUTS("CREATE EXTENSION ermia_fdw;\n");
+
+	PG_CMD_PUTS("CREATE SERVER ermia_server FOREIGN DATA WRAPPER ermia_fdw;\n");
+
+	PG_CMD_CLOSE;
+
+	check_ok();
+}
+#endif
+
 /*
  * clean everything up in template1
  */
@@ -2767,6 +2799,11 @@ initialize_data_directory(void)
 	 * Make the per-database PG_VERSION for template1 only after init'ing it
 	 */
 	write_version_file("base/1");
+
+#ifdef ENABLE_ERMIA
+	/* loading foreign-data wrapper for ermia in-memory data access */
+	load_ermia_fdw();
+#endif
 
 	/*
 	 * Create the stuff we don't need to use bootstrap mode for, using a

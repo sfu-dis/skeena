@@ -1414,6 +1414,9 @@ CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid)
 	Oid			ownerId;
 	ForeignDataWrapper *fdw;
 	ForeignServer *server;
+#ifdef ENABLE_ERMIA
+	FdwRoutine* fdwroutine;
+#endif
 
 	/*
 	 * Advance command counter to ensure the pg_attribute tuple is visible;
@@ -1438,6 +1441,18 @@ CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid)
 		aclcheck_error(aclresult, OBJECT_FOREIGN_SERVER, server->servername);
 
 	fdw = GetForeignDataWrapper(server->fdwid);
+
+#ifdef ENABLE_ERMIA
+  if (OidIsValid(fdw->fdwhandler))
+  {
+		fdwroutine = GetFdwRoutine(fdw->fdwhandler);
+		if (NULL != fdwroutine->ValidateTableDef)
+		{
+			stmt->base.relation->foreignOid = relid;
+			fdwroutine->ValidateTableDef((Node*)stmt);
+		}
+  }
+#endif
 
 	/*
 	 * Insert tuple into pg_foreign_table.

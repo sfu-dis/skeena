@@ -20,9 +20,9 @@
 	You should have received a copy of the GNU General Public License
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
-#include "api4fdw/ermia_api.h"
 
 #include "postgres.h"
+#include "pg_ermia.h"
 
 #include "foreign/fdwapi.h"
 #include "optimizer/pathnode.h"
@@ -63,6 +63,7 @@ static void ermiaBeginForeignScan(ForeignScanState *node, int eflags);
 static TupleTableSlot *ermiaIterateForeignScan(ForeignScanState *node);
 static void ermiaReScanForeignScan(ForeignScanState *node);
 static void ermiaEndForeignScan(ForeignScanState *node);
+static void ermiaValidateTableDef(Node *obj);
 
 /* magic */
 enum FdwScanPrivateIndex
@@ -98,6 +99,9 @@ Datum ermia_fdw_handler(PG_FUNCTION_ARGS)
 {
 	FdwRoutine *fdw_routine = makeNode(FdwRoutine);
 
+	/* Functions for ddl */
+	fdw_routine->ValidateTableDef = ermiaValidateTableDef;
+
 	/* Functions for scanning foreign tables */
 	fdw_routine->GetForeignRelSize = ermiaGetForeignRelSize;
 	fdw_routine->GetForeignPaths = ermiaGetForeignPaths;
@@ -129,6 +133,27 @@ Datum ermia_fdw_handler(PG_FUNCTION_ARGS)
 	fdw_routine->AnalyzeForeignTable = NULL;
 
 	PG_RETURN_POINTER(fdw_routine);
+}
+
+/*
+ * Validate table definition
+ * A Obj including infomation to validate when to alter tabel or create table.
+ */
+static void
+ermiaValidateTableDef(Node *obj)
+{
+	TransactionId tid = GetCurrentTransactionId();
+
+	switch (nodeTag(obj))
+	{
+	case T_CreateForeignTableStmt:
+	{
+	  CreateERMIATable();
+		break;
+	}
+	default:
+		elog(ERROR, "unrecognized node type: %u", nodeTag(obj));
+	}
 }
 
 /*
@@ -217,25 +242,4 @@ static void
 ermiaEndForeignScan(ForeignScanState *node)
 {
 	// TODO
-}
-
-/*
- * Initializes the engine.
- */
-void InitERMIA(void)
-{
-	ERMIAAdaptorInit();
-}
-
-/*
- * Terminates the engine.
- */
-void TermERMIA(void)
-{
-	if (!ERMIAAdaptorExists())
-	{
-		return;
-	}
-
-	ERMIAAdaptorDestroy();
 }
