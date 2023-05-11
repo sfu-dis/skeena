@@ -8,10 +8,10 @@ extern "C"
 
   #include <stdbool.h>
 
-  extern void ERMIAAdaptorInit();
-  extern void ERMIAAdaptorDestroy();
-  extern bool ERMIAAdaptorExists();
-  extern void ERMIAAdaptorCreateTable();
+  extern void AdaptorInit();
+  extern void AdaptorDestroy();
+  extern bool AdaptorExists();
+  extern void AdaptorCreateTable(const char *schemaname, const char *relname);
 
 #ifdef __cplusplus
 }

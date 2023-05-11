@@ -23,20 +23,21 @@
 
 #include "postgres.h"
 #include "pg_ermia.h"
-
-#include "foreign/fdwapi.h"
-#include "optimizer/pathnode.h"
-#include "optimizer/planmain.h"
-#include "optimizer/restrictinfo.h"
 #include "funcapi.h"
-#include "utils/rel.h"
-#include "nodes/makefuncs.h"
+#include "miscadmin.h"
 
 #include "access/detoast.h"
 #include "access/heaptoast.h"
-#include "catalog/pg_operator.h"
-#include "utils/syscache.h"
 #include "access/table.h"
+#include "catalog/pg_operator.h"
+#include "foreign/fdwapi.h"
+#include "nodes/makefuncs.h"
+#include "optimizer/pathnode.h"
+#include "optimizer/planmain.h"
+#include "optimizer/restrictinfo.h"
+#include "storage/backendid.h"
+#include "utils/rel.h"
+#include "utils/syscache.h"
 
 PG_MODULE_MAGIC;
 
@@ -144,15 +145,19 @@ ermiaValidateTableDef(Node *obj)
 {
 	TransactionId tid = GetCurrentTransactionId();
 
+	if (obj == NULL) {
+		return;
+	}
+
 	switch (nodeTag(obj))
 	{
-	case T_CreateForeignTableStmt:
-	{
-	  CreateERMIATable();
-		break;
-	}
-	default:
-		elog(ERROR, "unrecognized node type: %u", nodeTag(obj));
+		case T_CreateForeignTableStmt:
+		{
+			ERMIACreateTable((CreateForeignTableStmt*)obj, tid);
+			break;
+		}
+		default:
+			elog(ERROR, "unrecognized node type: %u", nodeTag(obj));
 	}
 }
 

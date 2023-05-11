@@ -1453,7 +1453,7 @@ PostmasterMain(int argc, char *argv[])
 
 #ifdef ENABLE_ERMIA
     /* Initialize the ERMIA engine */
-    InitERMIA();
+    ERMIAInit();
 #endif
 
 	/*
@@ -5126,7 +5126,7 @@ ExitPostmaster(int status)
 
 	/* should cleanup shared memory and kill all backends */
 #ifdef ENABLE_ERMIA
-	TermERMIA();
+	ERMIATerm();
 #endif
 
 	/*

@@ -457,7 +457,7 @@ int ha_ermia::close(void) {
 }
 
 void ha_ermia::get_full_table_name(char *buf) {
-  memcpy(buf, table->s->db.str, table->s->db.length);
+  memcpy(buf, table->s->dstrb.str, table->s->db.length);
   buf[table->s->db.length] = '/';
   memcpy(buf + table->s->db.length + 1, table->s->table_name.str, table->s->table_name.length);
   buf[table->s->db.length + 1 + table->s->table_name.length] = '\0';

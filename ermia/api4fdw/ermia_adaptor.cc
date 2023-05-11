@@ -1,19 +1,46 @@
 #include "ermia_adaptor.h"
 
-void ERMIAAdaptorInit() { fdw::ERMIAAdaptor::Init(); }
+void AdaptorInit() { fdw::Adaptor::Init(); }
 
-void ERMIAAdaptorDestroy() { fdw::ERMIAAdaptor::Destroy(); }
+void AdaptorDestroy() { fdw::Adaptor::Destroy(); }
 
-bool ERMIAAdaptorExists() { return fdw::ERMIAAdaptor::m_initialized; }
+bool AdaptorExists() { return fdw::Adaptor::Exists(); }
 
-void ERMIAAdaptorCreateTable() { fdw::ERMIAAdaptor::CreateTable(); }
+void AdaptorCreateTable(const char *schemaname, const char *relname) {
+  fdw::Adaptor::GetInstance()->CreateERMIATable(schemaname, relname);
+}
 
 namespace fdw {
-ermia::Engine *fdw::ERMIAAdaptor::m_engine = nullptr;
+Adaptor *fdw::Adaptor::m_adaptor = nullptr;
+ermia::Engine *fdw::Adaptor::m_engine = nullptr;
+bool Adaptor::m_initialized = false;
 
-bool ERMIAAdaptor::m_initialized = false;
+void Adaptor::Init() {
+  if (m_adaptor == nullptr) {
+    m_adaptor = new Adaptor();
+  }
+}
 
-void ERMIAAdaptor::Init() {
+void Adaptor::Destroy() {
+  if (m_adaptor != nullptr) {
+    DestroyERMIA();
+    LOG(INFO) << "Destroying Adaptor...";
+    delete m_adaptor;
+    m_adaptor = nullptr;
+  }
+  LOG(INFO) << "Bye Adaptor!";
+}
+
+Adaptor *Adaptor::GetInstance() {
+  Init();
+  return m_adaptor;
+}
+
+bool Adaptor::Exists() {
+  return m_initialized;
+}
+
+void Adaptor::InitERMIA() {
   if (m_engine == nullptr) {
     LOG(INFO) << "Start initializing ERMIA...";
     // FIXME: Hard-coded for now
@@ -39,15 +66,14 @@ void ERMIAAdaptor::Init() {
     ermia::config::tls_alloc = false;
     ermia::config::threadpool = false;
 
-    // TODO: do we need to pre-allocate str_arena here before initializing the
-    // engine?
+    // TODO: do we need to pre-allocate str_arena here before initializing the engine?
     m_engine = new ermia::Engine();
+    LOG(INFO) << "Hello ERMIA!";
   }
   m_initialized = true;
-  LOG(INFO) << "Hello ERMIA!";
 }
 
-void ERMIAAdaptor::Destroy() {
+void Adaptor::DestroyERMIA() {
   if (m_engine != nullptr) {
     LOG(INFO) << "Destroying ERMIA...";
     delete m_engine;
@@ -57,15 +83,63 @@ void ERMIAAdaptor::Destroy() {
   LOG(INFO) << "Bye ERMIA!";
 }
 
-void ERMIAAdaptor::CreateTable() {
-  LOG(ERROR) << "Creating an ERMIA table starts.";
+ermia::Engine *Adaptor::GetERMIA() {
+  InitERMIA();
+  return m_engine;
+}
+
+void Adaptor::CreateERMIATable(const char *schemaname, const char *relname) {
   static const uint32_t kMaxName = 512;
-  char table_name[kMaxName];
-  char index_name[kMaxName];
-  strcpy(table_name, "ermia_tbl");
-  strcpy(index_name, "ermia_idx");
-  m_engine->CreateTable(table_name);
-  m_engine->CreateMasstreePrimaryIndex(table_name, index_name);
-  LOG(ERROR) << "Creating an ERMIA table ends.";
+  char full_table_name[kMaxName];
+  char full_index_name[kMaxName];
+
+  get_full_table_name(schemaname, relname, full_table_name);
+  get_full_index_name(schemaname, relname, full_index_name);
+
+  LOG(INFO) << "Starts creating an ERMIA table: " << full_table_name;
+  m_engine->CreateTable(full_table_name);
+  LOG(INFO) << "Finishes creating an ERMIA table: " << full_table_name;
+
+  LOG(INFO) << "Starts creating primary index: " << full_index_name;
+  m_engine->CreateMasstreePrimaryIndex(full_table_name, full_index_name);
+  LOG(INFO) << "Finishes creating primary index: " << full_index_name;
+}
+
+void Adaptor::get_full_table_name(const char *schemaname, const char *relname, char *buf) {
+  uint16_t idx = 0;
+  uint16_t l_schemaname = strlen(schemaname);
+  uint16_t l_relname = strlen(relname);
+
+  memcpy(buf, schemaname, l_schemaname);
+  idx += l_schemaname;
+
+  buf[idx] = '/';
+  ++idx;
+
+  memcpy(buf + idx, relname, l_relname);
+  idx += l_relname;
+
+  buf[idx] = '\0';
+}
+
+void Adaptor::get_full_index_name(const char *schemaname, const char *relname, char *buf) {
+  uint16_t idx = 0;
+  uint16_t l_schemaname = strlen(schemaname);
+  uint16_t l_relname = strlen(relname);
+  char primary[8] = "Primary";
+
+  memcpy(buf, schemaname, l_schemaname);
+  idx += l_schemaname;
+
+  buf[idx] = '/';
+  ++idx;
+
+  memcpy(buf + idx, relname, l_relname);
+  idx += l_relname;
+
+  buf[idx] = '/';
+  ++idx;
+
+  strcpy(buf + idx, primary);
 }
 }  // namespace fdw

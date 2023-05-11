@@ -4,27 +4,27 @@
 /*
  * Initializes ERMIA engine.
  */
-void InitERMIA(void)
+void ERMIAInit(void)
 {
-	ERMIAAdaptorInit();
+	AdaptorInit();
 }    
 
 /*
  * Shutdown the ERMIA engine.
  */
-void TermERMIA(void)
+void ERMIATerm(void)
 {
-	if (!ERMIAAdaptorExists())
+	if (!AdaptorExists())
 	{
 		return;
 	}
-	ERMIAAdaptorDestroy();
+	AdaptorDestroy();
 }
 
 /*
  * Create a table in ERMIA.
  */
-void CreateERMIATable(void)
+void ERMIACreateTable(CreateForeignTableStmt* stmt, TransactionId tid)
 {
-	ERMIAAdaptorCreateTable();
+	AdaptorCreateTable(stmt->base.relation->schemaname, stmt->base.relation->relname);
 }
